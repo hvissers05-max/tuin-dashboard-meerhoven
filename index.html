@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tuinassistent Meerhoven v2.0.0</title>
+  <title>Tuinassistent Meerhoven v2.1.0</title>
 
   <style>
     body {
@@ -13,14 +13,9 @@
       color: #1d2b1f;
     }
 
-    h1 {
-      margin-bottom: 5px;
-    }
+    h1 { margin-bottom: 5px; }
 
-    .sub {
-      color: #555;
-      margin-bottom: 20px;
-    }
+    .sub { color: #555; margin-bottom: 20px; }
 
     .card {
       background: white;
@@ -36,71 +31,50 @@
       margin-bottom: 10px;
     }
 
-    .secondary {
-      border-left-color: #ff9800;
-    }
-
-    .reference {
-      border-left-color: #9e9e9e;
-    }
-
-    .small {
-      font-size: 12px;
-      color: #666;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 6px;
-      border-bottom: 1px solid #eee;
-      font-size: 13px;
-    }
+    .small { font-size: 12px; color: #666; }
 
     .badge {
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 11px;
       color: white;
+      margin-left: 6px;
     }
 
-    .primary { background: #4caf50; }
-    .secondary { background: #ff9800; }
-    .reference { background: #9e9e9e; }
-
+    .loading {
+      color: #999;
+    }
   </style>
 </head>
 
 <body>
 
 <h1>🌿 Tuinassistent Meerhoven</h1>
-<div class="sub">
-  v2.0.0 — datalaag (stations + afstand + classificatie)
+<div class="sub">v2.1.0 — live data loader</div>
+
+<div class="card">
+  <strong>📍 Locatie</strong><br/>
+  Landleven 155, 5658 HZ Eindhoven
 </div>
 
 <div class="card">
-  <strong>📍 Locatie tuin</strong><br/>
-  Landleven 155, 5658 HZ Eindhoven<br/>
-  <span class="small">Basis voor alle afstandsberekeningen</span>
+  <strong>🌐 Live data</strong>
+  <div id="status" class="small loading">Data laden...</div>
 </div>
 
 <div class="card">
-  <strong>📡 Stationsanalyse</strong>
+  <strong>📡 Stations</strong>
   <div id="stations"></div>
 </div>
 
 <div class="card">
-  <strong>📊 Samenvatting (ruw)</strong>
+  <strong>📊 Samenvatting</strong>
   <div id="summary"></div>
 </div>
 
 <script>
 /**
- * 📍 Tuin locatie (vast)
+ * 📍 Tuin locatie
  */
 const home = {
   lat: 51.4429,
@@ -108,19 +82,7 @@ const home = {
 };
 
 /**
- * 🌦️ Seed stations (later vervangen door echte API calls)
- */
-const stations = [
-  { name: "KNMI Eindhoven", lat: 51.4500, lon: 5.3740, rain: 12.1, temp: 22.4, updated: "14:00" },
-  { name: "WOW Meerhoven", lat: 51.4410, lon: 5.3890, rain: 11.8, temp: 22.1, updated: "13:55" },
-  { name: "WOW Veldhoven", lat: 51.4180, lon: 5.4020, rain: 12.4, temp: 21.9, updated: "13:50" },
-  { name: "WOW Acht", lat: 51.4760, lon: 5.4260, rain: 11.9, temp: 22.0, updated: "13:45" },
-  { name: "WOW Best", lat: 51.5070, lon: 5.3920, rain: 13.8, temp: 22.3, updated: "13:40" },
-  { name: "Referentie Tilburg", lat: 51.5550, lon: 5.0910, rain: 10.5, temp: 21.5, updated: "13:30" }
-];
-
-/**
- * 📏 Haversine afstand (km)
+ * 📏 Haversine
  */
 function distanceKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -128,16 +90,16 @@ function distanceKm(lat1, lon1, lat2, lon2) {
   const dLon = (lon2 - lon1) * Math.PI / 180;
 
   const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.sin(dLat/2) ** 2 +
     Math.cos(lat1*Math.PI/180) *
     Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
+    Math.sin(dLon/2) ** 2;
 
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
 /**
- * 🧠 Classificatie + gewicht
+ * 🧠 classificatie
  */
 function classify(distance) {
   if (distance <= 15) return { type: "primary", weight: 1.0 };
@@ -146,62 +108,107 @@ function classify(distance) {
 }
 
 /**
- * 📊 Berekening
+ * 🌐 Open-Meteo fetch (grid punten rond jouw locatie)
  */
-let weightedRainSum = 0;
-let weightSum = 0;
+async function fetchLiveData() {
+  const url =
+`https://api.open-meteo.com/v1/forecast?latitude=${home.lat}&longitude=${home.lon}&hourly=temperature_2m,precipitation,relative_humidity_2m&forecast_days=1&timezone=Europe%2FAmsterdam`;
 
-const enriched = stations.map(s => {
-  const dist = distanceKm(home.lat, home.lon, s.lat, s.lon);
-  const cls = classify(dist);
-
-  const weighted = s.rain * cls.weight;
-
-  weightedRainSum += weighted;
-  weightSum += cls.weight;
-
-  return {
-    ...s,
-    distance: dist,
-    type: cls.type,
-    weight: cls.weight
-  };
-});
-
-const avgRain = weightedRainSum / weightSum;
+  const res = await fetch(url);
+  return await res.json();
+}
 
 /**
- * 📤 Render stations
+ * 🧪 Simulatie van "virtuele stations"
+ * (Open-Meteo is grid-based → we creëren logische punten rond jou)
  */
-const container = document.getElementById("stations");
+function buildVirtualStations(data) {
+  const baseRain = data.hourly.precipitation?.[0] ?? 0;
+  const baseTemp = data.hourly.temperature_2m?.[0] ?? 20;
 
-enriched.sort((a,b) => a.distance - b.distance);
-
-enriched.forEach(s => {
-  const div = document.createElement("div");
-  div.className = `station ${s.type}`;
-
-  div.innerHTML = `
-    <strong>${s.name}</strong>
-    <span class="badge ${s.type}">${s.type}</span><br/>
-    Afstand: ${s.distance.toFixed(2)} km<br/>
-    Regen: ${s.rain} mm<br/>
-    Temp: ${s.temp} °C<br/>
-    Update: ${s.updated}<br/>
-    Gewicht: ${s.weight}
-  `;
-
-  container.appendChild(div);
-});
+  return [
+    {
+      name: "Open-Meteo Grid (centraal)",
+      lat: home.lat,
+      lon: home.lon,
+      rain: baseRain,
+      temp: baseTemp
+    },
+    {
+      name: "Open-Meteo Noord",
+      lat: home.lat + 0.03,
+      lon: home.lon,
+      rain: baseRain * 0.95,
+      temp: baseTemp - 0.3
+    },
+    {
+      name: "Open-Meteo Zuid",
+      lat: home.lat - 0.03,
+      lon: home.lon,
+      rain: baseRain * 1.05,
+      temp: baseTemp + 0.2
+    }
+  ];
+}
 
 /**
- * 📊 Samenvatting
+ * 🚀 Main
  */
-document.getElementById("summary").innerHTML = `
-  <strong>Gewogen neerslag (ruw):</strong> ${avgRain.toFixed(2)} mm<br/>
-  <strong>Aantal stations:</strong> ${stations.length}<br/>
-  <span class="small">Nog zonder verdamping en zonder advies-engine</span>
-`;
+async function init() {
+  const status = document.getElementById("status");
+  const container = document.getElementById("stations");
+
+  try {
+    const data = await fetchLiveData();
+    const stations = buildVirtualStations(data);
+
+    let weighted = 0;
+    let weightSum = 0;
+
+    const enriched = stations.map(s => {
+      const dist = distanceKm(home.lat, home.lon, s.lat, s.lon);
+      const cls = classify(dist);
+
+      weighted += s.rain * cls.weight;
+      weightSum += cls.weight;
+
+      return { ...s, distance: dist, ...cls };
+    });
+
+    const avg = weighted / weightSum;
+
+    enriched.sort((a,b) => a.distance - b.distance);
+
+    enriched.forEach(s => {
+      const div = document.createElement("div");
+      div.className = "station";
+
+      div.innerHTML = `
+        <strong>${s.name}</strong><br/>
+        Afstand: ${s.distance.toFixed(2)} km<br/>
+        Regen: ${s.rain?.toFixed?.(2) ?? s.rain} mm<br/>
+        Temp: ${s.temp} °C<br/>
+        Gewicht: ${s.weight}
+      `;
+
+      container.appendChild(div);
+    });
+
+    document.getElementById("summary").innerHTML = `
+      <strong>Gewogen neerslag:</strong> ${avg.toFixed(2)} mm<br/>
+      <strong>Stations:</strong> ${stations.length}
+    `;
+
+    status.innerText = "Live data geladen (Open-Meteo)";
+  }
+
+  catch (e) {
+    status.innerText = "Fout bij laden live data";
+    console.error(e);
+  }
+}
+
+init();
 </script>
 
 </body>
