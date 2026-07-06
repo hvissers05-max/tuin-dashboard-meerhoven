@@ -37,15 +37,16 @@
 
 document.getElementById("status").innerText = "SCRIPT DRAAIT ✅";
 
-console.log("Script gestart");
-
+// 🌧 stabiele basis (later vervangen door KNMI)
 let rainToday = 1.2;
 let rainYesterday = 0.8;
 
 let rain48h = rainToday + rainYesterday;
 
+// 🌡 temperatuur
 let temp = 27;
 
+// 🌡 verdamping
 let factor = 0;
 if (temp < 18) factor = 0;
 else if (temp < 25) factor = 0.1;
@@ -54,6 +55,7 @@ else factor = 0.5;
 
 let effective = rain48h + (rain48h * factor);
 
+// 💧 advieslogica
 let advies = "";
 
 if (effective <= 3) {
@@ -64,11 +66,7 @@ if (effective <= 3) {
   advies = "🔴 Niet sproeien";
 }
 
-document.getElementById("rain").innerText = rain48h + " mm";
+// 📤 output
+document.getElementById("rain").innerText = rain48h.toFixed(1) + " mm";
 document.getElementById("temp").innerText = temp + " °C";
 document.getElementById("advies").innerText = advies;
-
-</script>
-
-</body>
-</html>
