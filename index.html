@@ -59,37 +59,23 @@ async function loadData() {
 
     const lines = text.trim().split("\n");
 
-    let rainToday = null;
-    let rainYesterday = null;
+    let valid = [];
 
-    const now = new Date();
-    const yday = new Date();
-    yday.setDate(now.getDate() - 1);
+for (let l of lines) {
+  const p = l.trim().split(/\s+/);
+  const val = parseInt(p[p.length - 1]);
 
-    for (let l of lines) {
-      const p = l.trim().split(/\s+/);
-      if (p.length < 2) continue;
+  if (!isNaN(val)) {
+    valid.push(val / 10); // mm
+  }
+}
 
-      const val = parseInt(p[p.length - 1]);
-      if (isNaN(val)) continue;
+// laatste 2 dagen uit dataset
+const rainYesterday = valid[valid.length - 2] ?? null;
+const rainToday = valid[valid.length - 1] ?? null;
 
-      const dateStr = p[0];
-      if (!/^\d{8}$/.test(dateStr)) continue;
-
-      const d = new Date(
-        parseInt(dateStr.substring(0,4)),
-        parseInt(dateStr.substring(4,6)) - 1,
-        parseInt(dateStr.substring(6,8))
-      );
-
-      if (d.toDateString() === now.toDateString()) {
-        rainToday = val / 10;
-      }
-
-      if (d.toDateString() === yday.toDateString()) {
-        rainYesterday = val / 10;
-      }
-    }
+const rain48h =
+  (rainToday ?? 0) + (rainYesterday ?? 0);
 
     const rain48h = (rainToday ?? 0) + (rainYesterday ?? 0);
 
