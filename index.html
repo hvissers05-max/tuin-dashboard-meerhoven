@@ -47,8 +47,8 @@ function run() {
   console.log("script actief");
 
   // 🌧 vaste stabiele waarden
-  let rainToday = 1.2;
-  let rainYesterday = 0.8;
+  let rainToday = 0;
+let rainYesterday = 0;
   let rain48h = rainToday + rainYesterday;
 
   // 🌡 temperatuur
@@ -81,8 +81,52 @@ function run() {
     "- Volgende stap: KNMI integratie";
 
 }
+async function fetchRain() {
 
-run();
+  try {
+    const url = "https://cdn.knmi.nl/knmi/map/page/klimatologie/gegevens/daggegevens/etmaal_neerslag.txt";
+    const res = await fetch(url);
+    const text = await res.text();
+
+    const lines = text.split("\n");
+
+    const now = new Date();
+    const yday = new Date();
+    yday.setDate(now.getDate() - 1);
+
+    for (let line of lines) {
+
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 2) continue;
+
+      const dateStr = parts[0];
+      const val = parseInt(parts[parts.length - 1]);
+
+      if (!/^\d{8}$/.test(dateStr)) continue;
+      if (isNaN(val)) continue;
+
+      const d = new Date(
+        dateStr.substring(0,4),
+        dateStr.substring(4,6) - 1,
+        dateStr.substring(6,8)
+      );
+
+      if (d.toDateString() === now.toDateString()) {
+        rainToday = val / 10;
+      }
+
+      if (d.toDateString() === yday.toDateString()) {
+        rainYesterday = val / 10;
+      }
+    }
+
+  } catch (e) {
+    console.log("fallback regen actief");
+    rainToday = 1.2;
+    rainYesterday = 0.8;
+  }
+}
+fetchRain().then(() => run());
 </script>
 
 </body>
