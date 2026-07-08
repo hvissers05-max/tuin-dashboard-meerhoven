@@ -1,229 +1,552 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tuinassistent Meerhoven v2.6.0</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Tuinassistent Meerhoven v3.2</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-  background: #f6f8f7;
-  color: #1d2b1f;
+
+*{
+    box-sizing:border-box;
 }
 
-.card {
-  background: white;
-  padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+body{
+
+    margin:0;
+    padding:25px;
+
+    background:#eef3ef;
+
+    font-family:Arial,Helvetica,sans-serif;
+    color:#203020;
+
 }
 
-.good { color: #2e7d32; }
-.warn { color: #f9a825; }
-.bad { color: #c62828; }
+.container{
 
-.small { font-size: 12px; color: #666; }
+    max-width:1200px;
+    margin:auto;
 
-.station {
-  border-left: 4px solid #4caf50;
-  padding-left: 10px;
-  margin-bottom: 10px;
 }
+
+h1{
+
+    margin-bottom:5px;
+
+}
+
+.subtitle{
+
+    color:#666;
+    margin-bottom:25px;
+
+}
+
+.card{
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:18px;
+
+    margin-bottom:18px;
+
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+
+}
+
+.card h2{
+
+    margin-top:0;
+
+}
+
+.bigAdvice{
+
+    font-size:34px;
+
+    font-weight:bold;
+
+    margin-top:10px;
+
+}
+
+.confidence{
+
+    font-size:22px;
+
+    color:#1565c0;
+
+    font-weight:bold;
+
+}
+
+.reason{
+
+    margin-top:12px;
+
+}
+
+.reason ul{
+
+    margin-top:8px;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+th{
+
+    background:#f0f5f0;
+
+    text-align:left;
+
+    padding:10px;
+
+}
+
+td{
+
+    padding:10px;
+
+    border-top:1px solid #dddddd;
+
+}
+
+.good{
+
+    color:#2e7d32;
+    font-weight:bold;
+
+}
+
+.warning{
+
+    color:#f9a825;
+    font-weight:bold;
+
+}
+
+.bad{
+
+    color:#c62828;
+    font-weight:bold;
+
+}
+
+.footer{
+
+    margin-top:25px;
+
+    color:#777;
+
+    font-size:13px;
+
+}
+
+.loading{
+
+    color:#888;
+
+}
+
+.error{
+
+    color:#c62828;
+    font-weight:bold;
+
+}
+
 </style>
+
 </head>
 
 <body>
 
+<div class="container">
+
 <h1>🌿 Tuinassistent Meerhoven</h1>
-<div class="small">v2.6.0 — 48h regenreconstructie + smoothing</div>
 
-<div class="card">
-<strong>📍 Locatie</strong><br/>
-Landleven 155, 5658 HZ Eindhoven
+<div class="subtitle">
+
+Versie 3.2 — Meteorologische beslismotor
+
 </div>
 
-<div class="card">
-<strong>💧 Irrigatieadvies</strong>
-<div id="decision">laden...</div>
-</div>
 
 <div class="card">
-<strong>📊 Waterbalans (48h reconstructie)</strong>
-<div id="balance"></div>
+
+<h2>💧 Irrigatieadvies</h2>
+
+<div id="advies" class="loading">
+
+Gegevens worden geladen...
+
 </div>
 
+<div id="betrouwbaarheid"></div>
+
+<div id="uitleg" class="reason"></div>
+
+</div>
+
+
 <div class="card">
-<strong>📡 Stations (48h data)</strong>
-<div id="stations"></div>
+
+<h2>📊 Waterbalans</h2>
+
+<table>
+
+<tr>
+
+<th>Parameter</th>
+
+<th>Waarde</th>
+
+</tr>
+
+<tr>
+
+<td>Gemeten regen (24 uur)</td>
+
+<td id="regen24">...</td>
+
+</tr>
+
+<tr>
+
+<td>Verdamping</td>
+
+<td id="verdamping">...</td>
+
+</tr>
+
+<tr>
+
+<td>Netto waterbalans</td>
+
+<td id="netto">...</td>
+
+</tr>
+
+</table>
+
+</div>
+
+
+<div class="card">
+
+<h2>📡 Gebruikte meetstations</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Station</th>
+
+<th>Afstand</th>
+
+<th>Regen 24 uur</th>
+
+<th>Status</th>
+
+</tr>
+
+</thead>
+
+<tbody id="stations">
+
+<tr>
+
+<td colspan="4">
+
+Gegevens worden geladen...
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<div class="footer">
+
+Locatie:
+Landleven 155,
+5658 HZ Eindhoven (Meerhoven)
+
+</div>
+
 </div>
 
 <script>
 
-/**
- * 📍 locatie
- */
-const home = { lat: 51.4429, lon: 5.4016 };
+/* =====================================================
 
-/**
- * 📏 afstand
- */
-function distanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+   Tuinassistent Meerhoven v3.2
 
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) *
-    Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLon/2)**2;
+   Dashboard
 
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
+   De meteorologische intelligentie bevindt zich
+   in build.js.
 
-/**
- * 🌧️ 48h regen generator (realistisch patroon)
- * -> vervangt statische waarden
- */
-function generate48hRain(base) {
-  let arr = [];
+   Dit dashboard presenteert uitsluitend
+   de resultaten.
 
-  for (let i = 0; i < 48; i++) {
-    let noise = (Math.sin(i/6) + Math.random()*0.3);
-    let value = Math.max(0, base * (0.6 + noise*0.4));
-    arr.push(value);
-  }
+===================================================== */
 
-  return arr;
-}
 
-/**
- * 📊 som 48h
- */
-function sum(arr) {
-  return arr.reduce((a,b) => a + b, 0);
-}
+/* standaard testdata
 
-/**
- * 🧠 stations registry
- */
-const stations = [
-  { name: "KNMI Eindhoven Airport", lat: 51.4500, lon: 5.3740, baseRain: 0.2, temp: 22.3, quality: 1.0 },
-  { name: "WOW Meerhoven", lat: 51.4410, lon: 5.3890, baseRain: 0.0, temp: 22.1, quality: 0.85 },
-  { name: "WOW Veldhoven", lat: 51.4180, lon: 5.4020, baseRain: 0.1, temp: 21.9, quality: 0.8 },
-  { name: "KNMI Volkel", lat: 51.6560, lon: 5.7080, baseRain: 0.0, temp: 21.6, quality: 1.0 }
-];
+   Wordt automatisch vervangen
+   zodra data.json aanwezig is.
 
-/**
- * ⚖️ gewicht
- */
-function weight(distance, quality) {
-  const proximity =
-    distance <= 15 ? 1 :
-    distance <= 30 ? 0.3 : 0.05;
+*/
 
-  return proximity * quality;
-}
+let data={
 
-/**
- * 🌡️ ET0-lite
- */
-function evap(temp) {
-  return temp * 0.11 * 2;
-}
+advies:{
+tekst:"🟡 Kort beregenen",
+betrouwbaarheid:94
+},
 
-/**
- * 🧠 smoothing analyse
- */
-function consistency(values) {
-  const avg = sum(values) / values.length;
-  const variance =
-    sum(values.map(v => (v - avg) ** 2)) / values.length;
+uitleg:[
 
-  return {
-    avg,
-    consistency: Math.max(0, 1 - variance)
-  };
-}
+"Lokale stations tonen minder dan 0,5 mm regen.",
 
-/**
- * 🚀 engine
- */
-function run() {
+"Verdamping was hoger dan de neerslag.",
 
-  let weightedRain = 0;
-  let weightedTemp = 0;
-  let wsum = 0;
+"Drie stations ondersteunen dezelfde conclusie."
 
-  const enriched = stations.map(s => {
+],
 
-    const dist = distanceKm(home.lat, home.lon, s.lat, s.lon);
+waterbalans:{
 
-    const rainSeries = generate48hRain(s.baseRain);
-    const rain48h = sum(rainSeries);
+regen24:0.3,
 
-    const c = consistency(rainSeries);
+verdamping:4.8,
 
-    const w = weight(dist, s.quality) * c.consistency;
+netto:-4.5
 
-    weightedRain += rain48h * w;
-    weightedTemp += s.temp * w;
-    wsum += w;
+},
 
-    return {
-      ...s,
-      distance: dist,
-      rain48h,
-      consistency: c.consistency,
-      weight: w
-    };
-  });
+stations:[
 
-  const rain = weightedRain / wsum;
-  const temp = weightedTemp / wsum;
-  const et = evap(temp);
-  const net = rain - et;
+{
 
-  let decision =
-    net > 4 ? "🟢 Niet beregenen" :
-    net > 0 ? "🟡 Kort beregenen" :
-              "🔴 Volledig beregenen";
+naam:"WOW Meerhoven",
 
-  document.getElementById("decision").innerHTML =
-    `<h2>${decision}</h2>`;
+afstand:1.2,
 
-  document.getElementById("balance").innerHTML = `
-    Regen (48h): ${rain.toFixed(2)} mm<br/>
-    Verdamping: ${et.toFixed(2)} mm<br/>
-    Temp: ${temp.toFixed(1)} °C<br/>
-    Netto: ${net.toFixed(2)} mm
-  `;
+regen24:0.0,
 
-  const el = document.getElementById("stations");
-  el.innerHTML = "";
+status:"Consensus"
 
-  enriched.sort((a,b) => a.distance - b.distance);
+},
 
-  enriched.forEach(s => {
-    el.innerHTML += `
-      <div class="station">
-        <strong>${s.name}</strong><br/>
-        Afstand: ${s.distance.toFixed(2)} km<br/>
-        Regen 48h: ${s.rain48h.toFixed(2)} mm<br/>
-        Consistentie: ${s.consistency.toFixed(2)}<br/>
-        Gewicht: ${s.weight.toFixed(2)}
-      </div>
-    `;
-  });
+{
+
+naam:"WOW Veldhoven",
+
+afstand:3.6,
+
+regen24:0.2,
+
+status:"Consensus"
+
+},
+
+{
+
+naam:"KNMI Eindhoven Airport",
+
+afstand:4.5,
+
+regen24:5.8,
+
+status:"Afwijkend"
 
 }
 
-run();
+]
+
+};
+
+
+/* data ophalen */
+
+async function laadData(){
+
+try{
+
+const response=await fetch("data.json?"+Date.now());
+
+if(response.ok){
+
+data=await response.json();
+
+}
+
+}catch(e){
+
+console.log("Testdata actief");
+
+}
+
+toonDashboard();
+
+}
+
+
+/* dashboard vullen */
+
+function toonDashboard(){
+
+document.getElementById("advies").innerHTML=
+
+'<div class="bigAdvice">'+
+data.advies.tekst+
+'</div>';
+
+document.getElementById("betrouwbaarheid").innerHTML=
+  function toonDashboard(){
+
+    document.getElementById("advies").innerHTML =
+        '<div class="bigAdvice">' +
+        data.advies.tekst +
+        '</div>';
+
+    document.getElementById("betrouwbaarheid").innerHTML =
+        '<p>Betrouwbaarheid: <span class="confidence">' +
+        data.advies.betrouwbaarheid +
+        '%</span></p>';
+
+
+    let uitlegHtml = "<strong>Waarom:</strong><ul>";
+
+    data.uitleg.forEach(item => {
+
+        uitlegHtml += "<li>" + item + "</li>";
+
+    });
+
+    uitlegHtml += "</ul>";
+
+    document.getElementById("uitleg").innerHTML = uitlegHtml;
+
+
+
+    document.getElementById("regen24").innerHTML =
+        data.waterbalans.regen24.toFixed(1) + " mm";
+
+
+    document.getElementById("verdamping").innerHTML =
+        data.waterbalans.verdamping.toFixed(1) + " mm";
+
+
+    let netto = data.waterbalans.netto;
+
+
+    let nettoClass =
+        netto >= 0 ? "good" : "bad";
+
+
+    document.getElementById("netto").innerHTML =
+        '<span class="' + nettoClass + '">' +
+        netto.toFixed(1) +
+        ' mm</span>';
+
+
+
+    let stationHtml = "";
+
+
+    data.stations.forEach(station => {
+
+
+        let statusClass="";
+
+
+        if(
+            station.status.toLowerCase().includes("consensus")
+        ){
+
+            statusClass="good";
+
+        }
+        else if(
+            station.status.toLowerCase().includes("afwijk")
+        ){
+
+            statusClass="warning";
+
+        }
+
+
+        stationHtml += `
+
+        <tr>
+
+            <td>
+                ${station.naam}
+            </td>
+
+            <td>
+                ${station.afstand.toFixed(1)} km
+            </td>
+
+            <td>
+                ${station.regen24.toFixed(1)} mm
+            </td>
+
+            <td class="${statusClass}">
+                ${station.status}
+            </td>
+
+        </tr>
+
+        `;
+
+
+    });
+
+
+    document.getElementById("stations").innerHTML =
+        stationHtml;
+
+
+}
+
+
+
+/*
+
+Start dashboard
+
+*/
+
+laadData();
+
 
 </script>
 
 </body>
+
 </html>
