@@ -1,26 +1,23 @@
 {
   "advies": {
     "tekst": "🟡 Kort beregenen",
-    "betrouwbaarheid": 92
+    "betrouwbaarheid": 67
   },
-
   "uitleg": [
-    "WOW Meerhoven meldt 0,0 mm regen in 24 uur.",
-    "WOW Veldhoven bevestigt het droge patroon.",
-    "KNMI Eindhoven Airport wijkt af en wordt niet leidend gebruikt."
+    "Consensus gebaseerd op lokale meetstations.",
+    "Lokale regenmeting: 0.0 mm in 24 uur.",
+    "Een station wijkt af en is niet leidend gebruikt."
   ],
-
   "waterbalans": {
-    "regen24": 0.2,
+    "regen24": 0,
     "verdamping": 4.8,
-    "netto": -4.6
+    "netto": -4.8
   },
-
   "stations": [
     {
       "naam": "WOW Meerhoven",
       "afstand": 0.9,
-      "regen24": 0.0,
+      "regen24": 0,
       "status": "Consensus"
     },
     {
